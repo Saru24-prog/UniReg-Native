@@ -30,8 +30,8 @@ object SampleData {
                 TimeSlot.of(DayOfWeek.MON, "09:00", "10:30"), // clashes with CS3060
                 TimeSlot.of(DayOfWeek.THU, "13:00", "14:30"),
             ),
-            capacity = 50,
-            enrolled = 50, // full
+            capacity = 55,
+            enrolled = 30, //
         ),
         Course(
             id = "CS3021-ALT",

@@ -6,91 +6,86 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.uniregnative.data.Course
 import com.example.uniregnative.data.SampleData
-import com.example.uniregnative.logic.ClashDetector
 
 /**
- * Course catalog: browse all offered courses and add them to your
- * selection. Warns immediately (no dialog needed) if adding a course
- * would clash with something already selected, matching the
- * "Clash Detection" flow from the Figma spec.
+ * "Select Courses" interface — matches Milestone 02 screen 03_course_selection.
+ *
+ * Students can freely tick/untick any course (Create/Delete CRUD on the selection).
+ * Clash detection is deliberately NOT enforced here — per the Milestone 02 design,
+ * clashes are only surfaced later, on the Timetable Preview screen, after the
+ * student taps "Preview Timetable".
  */
 @Composable
 fun CourseCatalogScreen(
-    onProceedToTimetable: (List<Course>) -> Unit = {},
+    selectedCourses: SnapshotStateList<Course>,
+    onPreviewTimetable: () -> Unit = {},
 ) {
-    val selected = remember { mutableStateListOf<Course>() }
-    var clashWarning by remember { mutableStateOf<String?>(null) }
+    // Search text typed by the student — filters the catalog below as they type.
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredCourses = SampleData.catalog.filter { course ->
+        val query = searchQuery.trim()
+        query.isEmpty() ||
+                course.title.contains(query, ignoreCase = true) ||
+                course.id.contains(query, ignoreCase = true) ||
+                course.instructor.contains(query, ignoreCase = true)
+    }
 
     fun toggleCourse(course: Course) {
-        if (selected.any { it.id == course.id }) {
-            selected.removeAll { it.id == course.id }
-            clashWarning = null
-            return
-        }
-
-        val result = ClashDetector.wouldClash(selected, course)
-        if (result.hasClash) {
-            val clash = result.clashes.first()
-            val other = if (clash.courseA.id == course.id) clash.courseB else clash.courseA
-            clashWarning = "${course.id} clashes with ${other.id} (${clash.slotA.day})"
+        if (selectedCourses.any { it.id == course.id }) {
+            selectedCourses.removeAll { it.id == course.id } // Delete
         } else {
-            selected.add(course)
-            clashWarning = null
+            selectedCourses.add(course) // Create
         }
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text(
-            text = "Course Catalog",
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            text = "${selected.size} course(s) selected",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
+        Text("Select Courses", style = MaterialTheme.typography.headlineSmall)
+
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            label = { Text("Search courses...") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
         )
 
-        clashWarning?.let {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                colors = androidx.compose.material3.CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                ),
-            ) {
-                Text(
-                    text = "⚠ Clash: $it",
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(12.dp),
-                )
-            }
+        if (filteredCourses.isEmpty()) {
+            Text(
+                "No courses match \"$searchQuery\".",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 12.dp),
+            )
         }
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(SampleData.catalog) { course ->
-                val isSelected = selected.any { it.id == course.id }
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth().height(420.dp).padding(top = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(filteredCourses) { course ->
+                val isSelected = selectedCourses.any { it.id == course.id }
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
@@ -98,40 +93,47 @@ fun CourseCatalogScreen(
                             Text(
                                 "${course.id} • ${course.instructor} • ${course.credits} credits",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Text(
-                                course.slots.joinToString(", ") { slot ->
-                                    "${slot.day} ${slot.startMinutes / 60}:${(slot.startMinutes % 60).toString().padStart(2, '0')}"
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            if (course.isFull) {
+                            course.slots.forEach { slot ->
+                                Text(
+                                    "${slot.day}: " +
+                                            "${slot.startMinutes / 60}:" +
+                                            "${(slot.startMinutes % 60).toString().padStart(2, '0')} - " +
+                                            "${slot.endMinutes / 60}:" +
+                                            "${(slot.endMinutes % 60).toString().padStart(2, '0')}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                            if (course.isFull && !isSelected) {
                                 Text(
                                     "FULL",
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.error,
                                 )
                             }
                         }
-                        Button(
-                            onClick = { toggleCourse(course) },
+                        Checkbox(
+                            checked = isSelected,
+                            onCheckedChange = { toggleCourse(course) },
                             enabled = isSelected || !course.isFull,
-                        ) {
-                            Text(if (isSelected) "Remove" else "Add")
-                        }
+                        )
                     }
                 }
             }
         }
 
+        Text(
+            "${selectedCourses.size} of ${SampleData.catalog.size} courses selected",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+
         Button(
-            onClick = { onProceedToTimetable(selected.toList()) },
-            enabled = selected.isNotEmpty(),
-            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            onClick = onPreviewTimetable,
+            enabled = selectedCourses.isNotEmpty(),
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         ) {
-            Text("View Timetable (${selected.size})")
+            Text("Preview Timetable")
         }
     }
 }
