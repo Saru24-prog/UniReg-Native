@@ -2,17 +2,17 @@ package com.example.uniregnative.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,22 +24,28 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.uniregnative.data.Account
 
 /**
- * Login screen: email + password with basic validation. Matches the
- * "campus navy" high-fidelity Figma design (see UniRegTheme).
+ * Login screen: email + password checked against the real account store
+ * (Read CRUD). Matches the "campus navy" high-fidelity Figma design (see
+ * UniRegTheme), plus the "Forgot password?" and "New student? Register
+ * here" links from Milestone 02 screen 01_login.
  *
- * [onLoginSuccess] is called once validation passes — wire it to
- * navigation once a nav graph is in place.
+ * [onLoginSuccess] receives the matched account once credentials check out.
+ * [onNavigateToSignup] routes to the real Create Account screen.
  */
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit = {},
+    accounts: List<Account> = emptyList(),
+    onLoginSuccess: (Account) -> Unit = {},
+    onNavigateToSignup: () -> Unit = {},
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showForgotPasswordNote by remember { mutableStateOf(false) }
 
     fun isValidEmail(value: String): Boolean =
         value.contains("@") && value.substringAfter("@").contains(".")
@@ -52,8 +58,13 @@ fun LoginScreen(
             password.length < 6 -> "Password must be at least 6 characters"
             else -> null
         }
-        if (errorMessage == null) {
-            onLoginSuccess()
+        if (errorMessage != null) return
+
+        val account = accounts.find { it.email.equals(email.trim(), ignoreCase = true) }
+        when {
+            account == null -> errorMessage = "No account found for this email. Please sign up."
+            account.password != password -> errorMessage = "Incorrect password."
+            else -> onLoginSuccess(account)
         }
     }
 
@@ -93,7 +104,7 @@ fun LoginScreen(
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             trailingIcon = {
-                androidx.compose.material3.TextButton(onClick = { passwordVisible = !passwordVisible }) {
+                TextButton(onClick = { passwordVisible = !passwordVisible }) {
                     Text(if (passwordVisible) "Hide" else "Show")
                 }
             },
@@ -111,13 +122,39 @@ fun LoginScreen(
             )
         }
 
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = { showForgotPasswordNote = !showForgotPasswordNote }) {
+                Text("Forgot password?")
+            }
+        }
+        if (showForgotPasswordNote) {
+            Text(
+                "Password reset isn't available in this demo yet.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
         Button(
             onClick = ::attemptLogin,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 24.dp),
+                .padding(top = 16.dp),
         ) {
             Text("Log In")
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Text("New student?", style = MaterialTheme.typography.bodyMedium)
+            TextButton(onClick = onNavigateToSignup) {
+                Text("Register here")
+            }
         }
     }
 }

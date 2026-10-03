@@ -5,14 +5,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +39,10 @@ import com.example.uniregnative.data.SampleData
 @Composable
 fun CourseCatalogScreen(
     selectedCourses: SnapshotStateList<Course>,
+    accountName: String = "",
+    onOpenProfile: () -> Unit = {},
+    notificationCount: Int = 0,
+    onOpenNotifications: () -> Unit = {},
     onPreviewTimetable: () -> Unit = {},
 ) {
     // Search text typed by the student — filters the catalog below as they type.
@@ -59,7 +64,22 @@ fun CourseCatalogScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Select Courses", style = MaterialTheme.typography.headlineSmall)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "Select Courses",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedButton(onClick = onOpenProfile) {
+                Text("Hi, ${accountName.substringBefore(" ").ifBlank { "Student" }}")
+            }
+            OutlinedButton(onClick = onOpenNotifications) {
+                Text(if (notificationCount > 0) "🔔 $notificationCount" else "🔔")
+            }
+        }
 
         OutlinedTextField(
             value = searchQuery,
