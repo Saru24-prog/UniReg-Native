@@ -1,14 +1,18 @@
 package com.example.uniregnative.data
 
+import androidx.compose.runtime.mutableStateListOf
+
 /**
- * Mock course catalog for development/testing before a real backend or
- * database is wired in. Includes a deliberate clash (CS3060 vs CS3021,
- * both Mon 09:00-10:30) so you can exercise the clash-detection flow
- * immediately, matching the scenario used in your usability testing.
+ * Course catalog for the app. Starts with built-in sample data so the app
+ * always works out of the box (and offline), and can be refreshed live
+ * from Supabase via [refreshFromSupabase] — which updates this same list
+ * in place, so every screen reading [catalog] recomposes automatically.
+ * Includes a deliberate clash (CS3060 vs CS3021, both Mon 09:00-10:30) so
+ * you can exercise the clash-detection flow immediately.
  */
 object SampleData {
 
-    val catalog: List<Course> = listOf(
+    val catalog = mutableStateListOf(
         Course(
             id = "CS3060",
             title = "Human-Computer Interaction",
@@ -31,7 +35,7 @@ object SampleData {
                 TimeSlot.of(DayOfWeek.THU, "13:00", "14:30"),
             ),
             capacity = 55,
-            enrolled = 30, //
+            enrolled = 30,
         ),
         Course(
             id = "CS3021-ALT",
@@ -69,4 +73,21 @@ object SampleData {
             enrolled = 18,
         ),
     )
+
+    /**
+     * Pulls the latest courses from Supabase and replaces [catalog]'s
+     * contents in place. Returns true if the sync succeeded, false if it
+     * fell back to keeping the existing (built-in or last-synced) data —
+     * e.g. no internet connection.
+     */
+    suspend fun refreshFromSupabase(): Boolean {
+        val remoteCourses = SupabaseCourseRepository.fetchCourses()
+        return if (!remoteCourses.isNullOrEmpty()) {
+            catalog.clear()
+            catalog.addAll(remoteCourses)
+            true
+        } else {
+            false
+        }
+    }
 }

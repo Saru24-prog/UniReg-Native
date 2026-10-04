@@ -1,6 +1,7 @@
 package com.example.uniregnative.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.uniregnative.data.Course
 import com.example.uniregnative.data.DayOfWeek
+import com.example.uniregnative.data.TimeSlot
 import com.example.uniregnative.logic.ClashDetector
 import com.example.uniregnative.logic.ClashResult
 
@@ -42,14 +44,18 @@ private val WEEK_DAYS = listOf(
     DayOfWeek.FRI,
 )
 
+private fun timesOverlap(a: TimeSlot, b: TimeSlot): Boolean =
+    a.startMinutes < b.endMinutes && b.startMinutes < a.endMinutes
+
 /**
  * "Timetable Preview" interface — matches Milestone 02 screens
  * 04_timetable_preview (clash) / 21_timetable_preview_no_clash.
  *
  * Shows a weekly grid (Mon-Fri) with each selected course positioned by its
- * time slot, a "!" badge on any course involved in a clash, and a summary
- * card at the bottom that reports clash count or confirms the timetable is
- * clean.
+ * time slot. Courses that overlap in time on the same day are placed
+ * side-by-side (instead of stacking on top of each other) with a "⚠" badge
+ * and a red outline, so an overlap is always visible. A summary card at the
+ * bottom reports clash count or confirms the timetable is clean.
  */
 @Composable
 fun TimetableScreen(
@@ -87,38 +93,64 @@ fun TimetableScreen(
                         .height(GRID_HEIGHT)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                 ) {
-                    selectedCourses.forEach { course ->
-                        course.slots.filter { it.day == day }.forEach { slot ->
-                            val isClashing = course.id in clashedCourseIds
-                            val topOffset = MINUTE_HEIGHT * (slot.startMinutes - GRID_START_MINUTES)
-                            val blockHeight = MINUTE_HEIGHT * (slot.endMinutes - slot.startMinutes)
-                            Box(
-                                modifier = Modifier
-                                    .offset(y = topOffset)
-                                    .height(blockHeight)
-                                    .width(DAY_COLUMN_WIDTH)
-                                    .padding(2.dp)
-                                    .background(
-                                        color = if (isClashing) {
-                                            MaterialTheme.colorScheme.errorContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.primaryContainer
-                                        },
-                                        shape = RoundedCornerShape(4.dp),
-                                    )
-                                    .padding(4.dp),
-                            ) {
-                                Column {
-                                    Text(
-                                        (if (isClashing) "! " else "") + course.id,
-                                        style = MaterialTheme.typography.labelSmall,
-                                    )
-                                    Text(
-                                        "${slot.startMinutes / 60}:" +
-                                                "${(slot.startMinutes % 60).toString().padStart(2, '0')}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                    )
-                                }
+                    // All (course, slot) pairs that land on this day, earliest first.
+                    val daySlots = selectedCourses.flatMap { course ->
+                        course.slots.filter { it.day == day }.map { slot -> course to slot }
+                    }.sortedBy { it.second.startMinutes }
+
+                    daySlots.forEach { (course, slot) ->
+                        val isClashing = course.id in clashedCourseIds
+                        // Every slot on this day that overlaps this one in time
+                        // (including itself) — used to split overlapping courses into
+                        // side-by-side columns instead of stacking on top of each other.
+                        val overlapGroup = daySlots.filter { timesOverlap(it.second, slot) }
+                        val columnCount = overlapGroup.size
+                        val columnIndex = overlapGroup.indexOfFirst { (c, s) ->
+                            c.id == course.id && s.startMinutes == slot.startMinutes && s.endMinutes == slot.endMinutes
+                        }.coerceAtLeast(0)
+
+                        val topOffset = MINUTE_HEIGHT * (slot.startMinutes - GRID_START_MINUTES)
+                        val blockHeight = MINUTE_HEIGHT * (slot.endMinutes - slot.startMinutes)
+                        val blockWidth = DAY_COLUMN_WIDTH / columnCount
+                        val leftOffset = blockWidth * columnIndex
+
+                        Box(
+                            modifier = Modifier
+                                .offset(x = leftOffset, y = topOffset)
+                                .height(blockHeight)
+                                .width(blockWidth)
+                                .padding(1.dp)
+                                .background(
+                                    color = if (isClashing) {
+                                        MaterialTheme.colorScheme.errorContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    },
+                                    shape = RoundedCornerShape(4.dp),
+                                )
+                                .then(
+                                    if (isClashing) {
+                                        Modifier.border(
+                                            width = 1.5.dp,
+                                            color = MaterialTheme.colorScheme.error,
+                                            shape = RoundedCornerShape(4.dp),
+                                        )
+                                    } else {
+                                        Modifier
+                                    },
+                                )
+                                .padding(3.dp),
+                        ) {
+                            Column {
+                                Text(
+                                    (if (isClashing) "⚠ " else "") + course.id,
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                                Text(
+                                    "${slot.startMinutes / 60}:" +
+                                            "${(slot.startMinutes % 60).toString().padStart(2, '0')}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
                             }
                         }
                     }
