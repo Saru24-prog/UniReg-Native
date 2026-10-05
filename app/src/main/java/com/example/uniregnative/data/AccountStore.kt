@@ -3,6 +3,11 @@ package com.example.uniregnative.data
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 
 /**
  * Persists accounts and the current login session to local device storage
@@ -63,4 +68,30 @@ object AccountStore {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString(KEY_LOGGED_IN_EMAIL, null)
     }
+    fun savePhoto(context: Context, email: String, bitmap: ImageBitmap) {
+        try {
+            val fileName = photoFileName(email)
+            context.openFileOutput(fileName, Context.MODE_PRIVATE).use { out ->
+                bitmap.asAndroidBitmap().compress(Bitmap.CompressFormat.JPEG, 90, out)
+            }
+        } catch (e: Exception) {
+            // Photo just won't persist this time — not fatal.
+        }
+    }
+
+    fun loadPhoto(context: Context, email: String): ImageBitmap? {
+        return try {
+            val fileName = photoFileName(email)
+            if (!context.getFileStreamPath(fileName).exists()) return null
+            context.openFileInput(fileName).use { input ->
+                BitmapFactory.decodeStream(input)?.asImageBitmap()
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun photoFileName(email: String): String =
+        "photo_" + email.lowercase().replace(Regex("[^a-z0-9]"), "_") + ".jpg"
+
 }

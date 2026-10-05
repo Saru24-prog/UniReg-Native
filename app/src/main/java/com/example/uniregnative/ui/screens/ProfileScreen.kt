@@ -1,7 +1,7 @@
 package com.example.uniregnative.ui.screens
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.Image
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import com.example.uniregnative.data.Account
 import com.example.uniregnative.data.Course
 
+
 /**
  * "Profile" / "Dashboard" interface — matches Milestone 02 screen 02_dashboard,
  * restyled with a gradient header banner, an avatar photo (or initial), and
@@ -74,6 +75,16 @@ fun ProfileScreen(
                 )
                 .padding(horizontal = 20.dp, vertical = 28.dp),
         ) {
+            Text(
+                "Logout",
+                color = Color .White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .clickable {onLogout()}
+                    .padding(6 .dp),
+            )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (profilePhoto != null) {
                     Image(

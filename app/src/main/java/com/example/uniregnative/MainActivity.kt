@@ -1,5 +1,5 @@
 package com.example.uniregnative
-
+import android.widget.Toast
 import android.os.Bundle
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
@@ -71,7 +71,9 @@ class MainActivity : ComponentActivity() {
                 val registeredCourses = remember { mutableStateListOf<Course>() }
                 var viewingCourse by remember { mutableStateOf<Course?>(null) }
                 var profileReturnScreen by remember { mutableStateOf(Screen.SELECT_COURSES) }
-                var profilePhoto by remember { mutableStateOf<ImageBitmap?>(null) }
+                var profilePhoto by remember {
+                    mutableStateOf(currentAccount?.let { AccountStore.loadPhoto(context, it.email) })
+                }
 
                 fun addNotification(title: String, message: String) {
                     notifications.add(
@@ -83,6 +85,7 @@ class MainActivity : ComponentActivity() {
                             timestamp = "Just now",
                         ),
                     )
+                    Toast.makeText(context, "$title: $message", Toast.LENGTH_LONG).show()
                 }
 
                 if (showSplash) {
@@ -111,6 +114,7 @@ class MainActivity : ComponentActivity() {
                             onLoginSuccess = { account ->
                                 currentAccount = account
                                 loggedIn = true
+                                profilePhoto = AccountStore.loadPhoto(context, account.email)
                                 AccountStore.saveLoggedInEmail(context, account.email)
                                 screen = Screen.PHOTO_UPLOAD
                             },
@@ -121,6 +125,7 @@ class MainActivity : ComponentActivity() {
                             accountName = currentAccount?.fullName ?: "Student",
                             onPhotoChosen = { bitmap ->
                                 profilePhoto = bitmap
+                                currentAccount?.let { AccountStore.savePhoto(context, it.email, bitmap) }
                                 screen = Screen.SELECT_COURSES
                             },
                             onSkip = { screen = Screen.SELECT_COURSES },

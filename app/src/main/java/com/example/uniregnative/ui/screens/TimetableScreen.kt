@@ -99,7 +99,7 @@ fun TimetableScreen(
                     }.sortedBy { it.second.startMinutes }
 
                     daySlots.forEach { (course, slot) ->
-                        val isClashing = course.id in clashedCourseIds
+
                         // Every slot on this day that overlaps this one in time
                         // (including itself) — used to split overlapping courses into
                         // side-by-side columns instead of stacking on top of each other.
@@ -107,7 +107,8 @@ fun TimetableScreen(
                         val columnCount = overlapGroup.size
                         val columnIndex = overlapGroup.indexOfFirst { (c, s) ->
                             c.id == course.id && s.startMinutes == slot.startMinutes && s.endMinutes == slot.endMinutes
-                        }.coerceAtLeast(0)
+                                               }.coerceAtLeast(0)
+                        val isClashing = columnCount > 1
 
                         val topOffset = MINUTE_HEIGHT * (slot.startMinutes - GRID_START_MINUTES)
                         val blockHeight = MINUTE_HEIGHT * (slot.endMinutes - slot.startMinutes)
