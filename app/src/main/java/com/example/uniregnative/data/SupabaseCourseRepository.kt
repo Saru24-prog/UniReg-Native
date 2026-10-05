@@ -5,6 +5,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.net.HttpURLConnection
 import java.net.URL
+import org.json.JSONObject
+
 
 /**
  * Minimal Supabase REST client for read-only course catalog syncing.
@@ -22,7 +24,9 @@ object SupabaseCourseRepository {
      * failure (no internet, server error, bad response) so callers can
      * fall back to the built-in sample data instead of crashing.
      */
-    suspend fun fetchCourses(): List<Course>? = withContext(Dispatchers.IO) {
+
+    suspend fun fetchCourses(): List<Course>? = withContext(Dispatchers.IO)
+    {
         try {
             val url = URL("$SUPABASE_URL/rest/v1/courses?select=*")
             val connection = url.openConnection() as HttpURLConnection
@@ -71,6 +75,27 @@ object SupabaseCourseRepository {
             courses
         } catch (e: Exception) {
             null
+        }
+    }
+    suspend fun updateEnrolled(courseId: String, newEnrolled: Int): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val url = URL("$SUPABASE_URL/rest/v1/courses?id=eq.$courseId")
+            val connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "PATCH"
+            connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+            connection.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.setRequestProperty("Prefer", "return=minimal")
+            connection.doOutput = true
+            connection.connectTimeout = 8000
+            connection.readTimeout = 8000
+            val body = JSONObject().apply { put("enrolled", newEnrolled) }
+            connection.outputStream.use { it.write(body.toString().toByteArray()) }
+            val code = connection.responseCode
+            connection.disconnect()
+            code in 200..299
+        } catch (e: Exception) {
+            false
         }
     }
 }

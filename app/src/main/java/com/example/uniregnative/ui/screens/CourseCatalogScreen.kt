@@ -1,6 +1,6 @@
 package com.example.uniregnative.ui.screens
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,18 +9,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,13 +30,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.uniregnative.data.Course
 import com.example.uniregnative.data.SampleData
 import kotlinx.coroutines.launch
+
+private val ACCENT = Color(0xFF6366F1)
+private val TITLE_COLOR = Color(0xFF111827)
 
 /**
  * "Select Courses" interface — matches Milestone 02 screen 03_course_selection.
@@ -50,6 +52,10 @@ import kotlinx.coroutines.launch
  * The course list is backed by [SampleData.catalog], which can be refreshed
  * live from Supabase (the "Sync" button below) — demonstrating that course
  * data is driven by a remote source, not hardcoded, without rebuilding the app.
+ *
+ * The notification bell that used to live here was removed since it's already
+ * in the shared top header with its badge count — but the "Hi, name" greeting
+ * stays, now as plain styled text instead of a bright default-blue button.
  */
 @Composable
 fun CourseCatalogScreen(
@@ -97,32 +103,37 @@ fun CourseCatalogScreen(
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
+            Column {
+                Text(
+                    "Select Courses",
+                    fontSize = MaterialTheme.typography.headlineMedium.fontSize,
+                    fontWeight = FontWeight.Bold,
+                    color = TITLE_COLOR,
+                )
+                Text(
+                    "Choose your courses for this semester",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
             Text(
-                "Select Courses",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.weight(1f),
+                "Hi, ${accountName.substringBefore(" ").ifBlank { "Student" }} 👋",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = ACCENT,
+                modifier = Modifier
+                    .padding(top = 4.dp)
+                    .clickable { onOpenProfile() },
             )
-            OutlinedButton(onClick = onOpenProfile) {
-                if (profilePhoto != null) {
-                    Image(
-                        bitmap = profilePhoto,
-                        contentDescription = "Profile photo",
-                        modifier = Modifier.size(20.dp).clip(CircleShape),
-                        contentScale = ContentScale.Crop,
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                }
-                Text("Hi, ${accountName.substringBefore(" ").ifBlank { "Student" }}")
-            }
-            OutlinedButton(onClick = onOpenNotifications) {
-                Text(if (notificationCount > 0) "🔔 $notificationCount" else "🔔")
-            }
         }
+        Spacer(modifier = Modifier.height(14.dp))
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -135,8 +146,11 @@ fun CourseCatalogScreen(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            OutlinedButton(onClick = { syncCourses() }, enabled = !isSyncing) {
-                Text(if (isSyncing) "⟳ Syncing" else "⟳ Sync")
+            TextButton(onClick = { syncCourses() }, enabled = !isSyncing) {
+                Text(
+                    if (isSyncing) "⟳ Syncing" else "⟳ Sync",
+                    color = ACCENT,
+                )
             }
         }
 
@@ -145,7 +159,12 @@ fun CourseCatalogScreen(
             onValueChange = { searchQuery = it },
             label = { Text("Search courses...") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = ACCENT,
+                focusedLabelColor = ACCENT,
+                cursorColor = ACCENT,
+            ),
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         )
 
         if (filteredCourses.isEmpty()) {
@@ -195,6 +214,7 @@ fun CourseCatalogScreen(
                             checked = isSelected,
                             onCheckedChange = { toggleCourse(course) },
                             enabled = isSelected || !course.isFull,
+                            colors = CheckboxDefaults.colors(checkedColor = ACCENT),
                         )
                     }
                 }

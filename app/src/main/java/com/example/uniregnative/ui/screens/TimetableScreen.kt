@@ -29,6 +29,7 @@ import com.example.uniregnative.data.DayOfWeek
 import com.example.uniregnative.data.TimeSlot
 import com.example.uniregnative.logic.ClashDetector
 import com.example.uniregnative.logic.ClashResult
+import androidx.compose.foundation.verticalScroll
 
 // One minute of class time = 0.6dp tall, and the grid starts showing from 8:00 AM.
 private val MINUTE_HEIGHT: Dp = 0.6.dp
@@ -66,7 +67,12 @@ fun TimetableScreen(
     val clashResult = ClashDetector.detect(selectedCourses)
     val clashedCourseIds = clashResult.affectedCourses.map { it.id }.toSet()
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+    ) {
         Text("Timetable Preview", style = MaterialTheme.typography.headlineSmall)
 
         Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
