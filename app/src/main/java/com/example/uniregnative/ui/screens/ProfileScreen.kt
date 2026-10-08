@@ -47,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.uniregnative.data.Account
 import com.example.uniregnative.data.Course
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 private val ACCENT = Color(0xFF4F46E5)
 private val AVATAR_SIZE = 100.dp
@@ -76,7 +78,7 @@ fun ProfileScreen(
     var editedName by remember(account?.email) { mutableStateOf(account?.fullName ?: "") }
     var editedFaculty by remember(account?.email) { mutableStateOf(account?.faculty ?: "") }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -220,7 +222,7 @@ fun ProfileScreen(
         }
 
         // --- Everything below (registered courses) is unchanged ---
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -260,11 +262,11 @@ fun ProfileScreen(
                     )
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth().height(430.dp).padding(top = 12.dp),
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    items(registeredCourses) { course ->
+                    registeredCourses.forEach { course ->
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
